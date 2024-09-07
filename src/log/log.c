@@ -103,14 +103,14 @@ void log_file(const char* file, int line, const char* type, const char* fmt, va_
 {
     FILE* logFile = fopen("output.log", "a");
 
-    char buffer[BUFFER_LENGTH];
-    size_t wroteBytes = (size_t)snprintf(buffer, BUFFER_LENGTH, "[%s %s:%d]: ", type, skip_src(file), line);
+    char buffer[LOG_BUFFER_LENGTH];
+    size_t wroteBytes = (size_t)snprintf(buffer, LOG_BUFFER_LENGTH, "[%s %s:%d]: ", type, skip_src(file), line);
     fwrite(buffer, sizeof(char), wroteBytes, logFile);
-    memset(buffer, '\0', BUFFER_LENGTH);
+    memset(buffer, '\0', LOG_BUFFER_LENGTH);
 
-    wroteBytes = (size_t)vsnprintf(buffer, BUFFER_LENGTH, fmt, *args);
-    if (wroteBytes >= BUFFER_LENGTH - 1) {
-        wroteBytes = BUFFER_LENGTH - 1; // TRUNCATED, vsnprintf should '\0' the buffer
+    wroteBytes = (size_t)vsnprintf(buffer, LOG_BUFFER_LENGTH, fmt, *args);
+    if (wroteBytes >= LOG_BUFFER_LENGTH - 1) {
+        wroteBytes = LOG_BUFFER_LENGTH - 1; // TRUNCATED, vsnprintf should '\0' the buffer
     }
     fwrite(buffer, sizeof(char), wroteBytes, logFile);
 
