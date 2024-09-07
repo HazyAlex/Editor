@@ -2,6 +2,7 @@
 #define STRING_INCLUDE_GUARD
 
 #include <stdlib.h>
+#include <string.h>
 #include "structures/types.h"
 #include "log/log.h"
 
@@ -15,6 +16,7 @@ typedef struct {
 } String;
 
 String string_empty();
+String string_from_c(char *data);
 String string_alloc(i64 capacity);
 void string_dealloc(String *string);
 

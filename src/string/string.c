@@ -12,6 +12,26 @@ String string_empty()
     return string;
 }
 
+String string_from_c(char *data)
+{
+    size_t length = strlen(data);
+
+    u8 *copy = (u8*) calloc(length + 1, sizeof(u8));
+    if (copy == NULL) {
+        ERROR("OUT OF MEMORY!");
+        exit(EXIT_CODE_OUT_OF_MEMORY);
+    }
+
+    memcpy(copy, data, (length + 1) * sizeof(u8));
+
+    String string;
+    string.data = copy;
+    string.size = length;
+    string.capacity = length;
+
+    return string;
+}
+
 String string_alloc(i64 capacity)
 {
     String string;
