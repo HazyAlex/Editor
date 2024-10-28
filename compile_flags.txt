@@ -1,0 +1,10 @@
+-I
+src
+-I
+src/opengl
+-I
+src/opengl/glfw
+-I
+src/text_rendering/freetype
+-I
+src/text_rendering/freetype/config
