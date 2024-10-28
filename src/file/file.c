@@ -1,14 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include "structures/types.h"
 #include "log/log.h"
 #include "string/string.h"
 
 
 String read_contents(const char* filename)
 {
-    FILE* file = fopen(filename, "rb");
-    if (file == NULL) {
-        ERROR("Could not find the file to read from!\n");
+    FILE* file = NULL;
+
+    errno_t error = fopen_s(&file, filename, "rb");
+    if (error != 0 || file == NULL) {
+        ERROR("Could not open the file '%s', error: '%s'\n", filename, strerror(error));
 
         return string_empty();
     }
@@ -29,6 +33,7 @@ String read_contents(const char* filename)
         WARNING("Could not close file: %s", filename);
     }
 
+    contents.size = filesize;
     contents.data[filesize] = '\0';
 
     return contents;
