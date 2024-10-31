@@ -17,6 +17,7 @@ void initialize_state(EditorState *state)
     buffer.cursor_index = 0;
 
     state->buffer = buffer;
+    state->cursor = initialize_cursor();
 }
 
 void add_line(Buffer *buffer, String contents, u64 line, u64 start, u64 end)
@@ -79,4 +80,22 @@ EditorState initialize_editor(const char *path)
     string_dealloc(&contents);
 
     return state;
+}
+
+Cursor initialize_cursor()
+{
+    Cursor cursor = {
+        .text_color = (color){.r = 225, .g = 225, .b = 225}
+    };
+
+    return cursor;
+}
+
+void cursor_blink(Cursor *cursor, time_t *timer)
+{
+    if (time(NULL) - *timer > 0.3) {
+        cursor->text_color.b = cursor->text_color.b == 225 ? 0 : 225;
+
+        *timer = time(NULL);
+    }
 }

@@ -336,6 +336,44 @@ void render_text(Graphics graphics, Character *characters, const char *text, col
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+void render_cursor(Graphics graphics, Character* characters, const char character, Cursor cursor, float x, float y)
+{
+    uvec2 *frame_data = (uvec2 *)graphics.frame;
+    u32 VAO = frame_data->x;
+    u32 VBO = frame_data->y;
+
+    glUseProgram(graphics.shader.id);
+    glUniform3f(glGetUniformLocation(graphics.shader.id, "textColor"), cursor.text_color.r, cursor.text_color.g, cursor.text_color.b);
+    glActiveTexture(GL_TEXTURE0);
+    glBindVertexArray(VAO);
+
+    Character ch = characters[(u8) character];
+
+    float xPos = x + ch.bearing.x;
+    float yPos = y - (ch.size.y - ch.bearing.y);
+    float w = ch.size.x;
+    float h = ch.size.y;
+
+    float vertices[6][4] = {
+        { xPos,     yPos + h,   0.0f, 0.0f },
+        { xPos,     yPos,       0.0f, 1.0f },
+        { xPos + w, yPos,       1.0f, 1.0f },
+
+        { xPos,     yPos + h,   0.0f, 0.0f },
+        { xPos + w, yPos,       1.0f, 1.0f },
+        { xPos + w, yPos + h,   1.0f, 0.0f }
+    };
+
+    glBindTexture(GL_TEXTURE_2D, ch.textureId);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 void render_frame(Graphics graphics)
 {
     GLFWwindow *window = (GLFWwindow *)graphics.window;

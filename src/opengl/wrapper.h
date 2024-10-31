@@ -5,6 +5,7 @@
 #include "settings/settings.h"
 #include "text_rendering/text_rendering.h"
 #include "graphics/types.h"
+#include "editor/editor.h"
 
 
 Graphics initialize_graphics_api(Settings *settings);
@@ -20,6 +21,7 @@ u32 create_shader_program(u32 vertex_shader_id, u32 fragment_shader_id, u32 geom
 
 void set_background(color background);
 void render_text(Graphics graphics, Character *characters, const char *text, color text_color, float x, float y, float scale);
+void render_cursor(Graphics graphics, Character *characters, const char character, Cursor cursor, float x, float y);
 void render_frame(Graphics graphics);
 
 
