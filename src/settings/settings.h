@@ -20,7 +20,7 @@ typedef struct {
 } Settings;
 
 Settings initialize_settings(void);
-void free_settings(Settings *settings);
+void dealloc_settings(Settings *settings);
 
 
 #endif

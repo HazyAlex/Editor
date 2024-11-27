@@ -3,7 +3,7 @@
 
 #include "structures/types.h"
 
-#define ERROR_FAILED_TO_COMPILE_SHADERS 3
+#define EXIT_CODE_FAILED_TO_COMPILE_SHADERS 6
 
 
 enum ShaderType {

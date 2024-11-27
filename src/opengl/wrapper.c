@@ -1,4 +1,5 @@
 #include "wrapper.h"
+#include "editor/editor.h"
 #include "log/log.h"
 #include "GLAD/glad.h"
 #include "GLFW/glfw3.h"
@@ -13,12 +14,15 @@ void error_callback(int error, const char* description)
 
 void window_iconify_callback(GLFWwindow* window, int minimized)
 {
-    Settings *settings = (Settings *)glfwGetWindowUserPointer(window);
+    EditorState *editor = (EditorState *)glfwGetWindowUserPointer(window);
+    if (editor == NULL) {
+        return;
+    }
 
     if (minimized) {
-        glfwSwapInterval(settings->window_swap_interval_inactive);
+        glfwSwapInterval(editor->settings.window_swap_interval_inactive);
     } else {
-        glfwSwapInterval(settings->window_swap_interval_active);
+        glfwSwapInterval(editor->settings.window_swap_interval_active);
     }
 }
 
@@ -32,10 +36,99 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     (void) scancode;
-    (void) mods;
 
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
+    EditorState *editor = (EditorState *)glfwGetWindowUserPointer(window);
+    if (editor == NULL) {
+        return;
+    }
+
+    cursor_blink_reset(&editor->cursor);
+
+    if (action == GLFW_RELEASE) {
+        return;
+    }
+
+    bool hasControl = mods & GLFW_MOD_CONTROL;
+    bool hasShift = mods & GLFW_MOD_SHIFT;
+
+    switch (key) {
+        case GLFW_KEY_ESCAPE: {
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+            break;
+        }
+
+        case GLFW_KEY_UP: {
+            go_up(editor);
+            break;
+        }
+
+        case GLFW_KEY_DOWN: {
+            go_down(editor);
+            break;
+        }
+
+        case GLFW_KEY_RIGHT: {
+            go_right(editor);
+            break;
+        }
+
+        case GLFW_KEY_LEFT: {
+            go_left(editor);
+            break;
+        }
+
+        case GLFW_KEY_BACKSPACE: {
+            u64 column_to_remove = editor->buffer.current_column == 0
+                ? editor->buffer.current_column
+                : editor->buffer.current_column - 1;
+
+            bool deleted = delete_character(editor, column_to_remove);
+            if (deleted && editor->buffer.current_column > 0) {
+                editor->buffer.current_column -= 1;
+            }
+            break;
+        }
+
+        case GLFW_KEY_DELETE: {
+            delete_character(editor, editor->buffer.current_column);
+            if (editor->buffer.current_column > 0) {
+                editor->buffer.current_column -= 1;
+            }
+            break;
+        }
+
+        case GLFW_KEY_ENTER: {
+            add_line(editor);
+            editor->buffer.current_line += 1;
+            break;
+        }
+
+        case GLFW_KEY_S:
+            if (hasControl) {
+                editor_save_file(editor);
+                return;
+            }
+            // fallthrough
+
+        default: {
+            bool isValid = key >= GLFW_KEY_SPACE && key <= GLFW_KEY_GRAVE_ACCENT;
+
+            // If it is not an ASCII control character (e.g. \n)
+            if (isValid) {
+                bool isLetter = key >= GLFW_KEY_A && key <= GLFW_KEY_Z;
+                char c = (int)key;
+
+                if (! hasShift && isLetter) {
+                    c = c + 32;
+                }
+
+                bool added = add_character(editor, c);
+                if (added) {
+                    editor->buffer.current_column += 1;
+                }
+            }
+            break;
+        }
     }
 }
 
@@ -55,7 +148,8 @@ GLFWmonitor *getMonitor(Settings *settings) {
     return monitors[index];
 }
 
-GLFWwindow *initialize_window(Settings *settings) {
+GLFWwindow *initialize_window(Settings *settings)
+{
     glfwSetErrorCallback(error_callback);
 
     if (! glfwInit()) {
@@ -101,7 +195,6 @@ GLFWwindow *initialize_window(Settings *settings) {
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetKeyCallback(window, key_callback);
     glfwSetWindowIconifyCallback(window, window_iconify_callback);
-    glfwSetWindowUserPointer(window, settings);
 
     if (gladLoadGL() == 0)
     {
@@ -144,7 +237,7 @@ bool should_close_window(Graphics graphics)
     return glfwWindowShouldClose(window);
 }
 
-void clean_graphics_api(Graphics *graphics)
+void dealloc_graphics_api(Graphics *graphics)
 {
     GLFWwindow *window = (GLFWwindow *)graphics->window;
     (void) window;
@@ -232,7 +325,7 @@ void check_shader_compile_errors(u32 shader_id, const char *name)
         glGetShaderInfoLog(shader_id, sizeof(log), NULL, log);
 
         ERROR("Shader (%s) compilation error: %s", name, log);
-        exit(ERROR_FAILED_TO_COMPILE_SHADERS);
+        exit(EXIT_CODE_FAILED_TO_COMPILE_SHADERS);
     }
 }
 
@@ -281,6 +374,11 @@ u32 create_shader_program(u32 vertex_shader_id, u32 fragment_shader_id, u32 geom
     if (geometry_shader_id > 0) glDeleteShader(geometry_shader_id);
 
     return program_id;
+}
+
+void set_editor_state(Graphics *graphics, EditorState *editor)
+{
+    glfwSetWindowUserPointer(graphics->window, editor);
 }
 
 void set_background(color background)
@@ -336,23 +434,46 @@ void render_text(Graphics graphics, Character *characters, const char *text, col
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void render_cursor(Graphics graphics, Character* characters, const char character, Cursor cursor, float x, float y)
+void render_cursor(EditorState editor, Graphics graphics, Character* characters, float x, float y)
 {
     uvec2 *frame_data = (uvec2 *)graphics.frame;
     u32 VAO = frame_data->x;
     u32 VBO = frame_data->y;
 
     glUseProgram(graphics.shader.id);
-    glUniform3f(glGetUniformLocation(graphics.shader.id, "textColor"), cursor.text_color.r, cursor.text_color.g, cursor.text_color.b);
+    glUniform3f(glGetUniformLocation(graphics.shader.id, "textColor"), editor.cursor.text_color.r, editor.cursor.text_color.g, editor.cursor.text_color.b);
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(VAO);
 
-    Character ch = characters[(u8) character];
+    u64 line = editor.buffer.current_line;
+    u64 column = editor.buffer.current_column;
+    String text = editor.buffer.lines[line];
+
+    for (u32 i = 0; i < column; ++i) {
+        if (i >= text.size) break;
+
+        u8 character_index = text.data[i];
+        if (character_index < 32) continue; // Ignore ASCII terminal control characters.
+
+        Character ch = characters[character_index];
+
+        // Advance the cursor for the next glyph (advance is number of 1/64 pixels, 2^6 = 64)
+        x += (ch.advance >> 6);
+    }
+
+    u8 character_index = text.data[column];
+    Character ch = characters[character_index];
+
+    bool isSpace = character_index == 32;
+    if (isSpace) ch = characters[0];
 
     float xPos = x + ch.bearing.x;
     float yPos = y - (ch.size.y - ch.bearing.y);
     float w = ch.size.x;
     float h = ch.size.y;
+
+    bool drawAsUnderscore = character_index <= 32;
+    if (drawAsUnderscore) h = 1;
 
     float vertices[6][4] = {
         { xPos,     yPos + h,   0.0f, 0.0f },

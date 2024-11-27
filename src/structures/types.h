@@ -3,6 +3,14 @@
 
 #include <stdint.h>
 
+#ifdef _WIN32
+    #define OS_NEWLINE "\r\n"
+    #define OS_NEWLINE_SIZE 2
+#else
+    #define OS_NEWLINE "\n"
+    #define OS_NEWLINE_SIZE 1
+#endif
+
 
 typedef _Bool bool;
 #define TRUE  1
