@@ -36,7 +36,7 @@ if "clang" == "%OPTION%" goto :clang
 
 :clang
     set BUILD_COMPILER_FLAGS=-std=c17 -O0 -DLOG -DGL_DEBUG -g -gcodeview -Wall -Wextra -Wpedantic
-    set BUILD_LINKER_FLAGS=-D_CRT_SECURE_NO_DEPRECATE -static -lopengl32 -lgdi32 -luser32 -lshell32 src/opengl/glfw/glfw3.lib src/text_rendering/freetype/freetypeW64.lib
+    set BUILD_LINKER_FLAGS=-D_CRT_SECURE_NO_DEPRECATE -static -lopengl32 -lgdi32 -luser32 -lshell32 src/opengl/glfw/glfw3.lib -Xlinker /ignore:4099 src/text_rendering/freetype/freetype.lib -Xlinker /DEBUG:FULL -Xlinker /subsystem:console -fsanitize=address
 
     clang %BUILD_SOURCE_FILES% %BUILD_COMPILER_FLAGS%^
         %BUILD_LINK_PATHS% %BUILD_LINKER_FLAGS%^
