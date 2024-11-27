@@ -12,8 +12,8 @@ Settings initialize_settings(void)
     settings.window_swap_interval_inactive = 60;
 
     settings.window_name = string_from_c("Editor");
-    settings.window_fullscreen = TRUE;
-    settings.window_monitor_index = 1;
+    settings.window_fullscreen = FALSE;
+    settings.window_monitor_index = 0;
 
     settings.font = string_from_c("assets/fonts/clacon2.ttf");
     settings.font_size = 32;
